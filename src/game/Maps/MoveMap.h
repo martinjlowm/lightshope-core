@@ -44,7 +44,7 @@ inline void dtCustomFree(void* ptr)
 namespace MMAP
 {
     typedef UNORDERED_MAP<uint32, dtTileRef> MMapTileSet;
-    typedef UNORDERED_MAP<uint32, dtNavMeshQuery*> NavMeshQuerySet;
+    typedef UNORDERED_MAP<size_t, dtNavMeshQuery*> NavMeshQuerySet;
 
     // dummy struct to hold map's mmap data
     struct MMapData
@@ -78,7 +78,7 @@ namespace MMAP
             MMapManager() : loadedTiles(0) {}
             ~MMapManager();
 
-            void CleanUpNavQuery(uint32 tid);       // Cleans up the dtNavMeshQuery created by the given thread (if any)
+            void CleanUpNavQuery(size_t tid);       // Cleans up the dtNavMeshQuery created by the given thread (if any)
             void CleanUpCurrentThreadNavQuery();    // Cleans up the dtNavMeshQuery created by the current thread (if any)
 
             bool loadMap(uint32 mapId, int32 x, int32 y);
@@ -99,7 +99,7 @@ namespace MMAP
             bool loadMapData(uint32 mapId);
             uint32 packTileID(int32 x, int32 y);
 
-            void RemoveThreadNavMeshQueries(uint32 tid, MMapData *mmap);    // Cleans up any dtNavMeshQuery in the given mmap related to the given tid
+            void RemoveThreadNavMeshQueries(size_t tid, MMapData *mmap);    // Cleans up any dtNavMeshQuery in the given mmap related to the given tid
 
             MMapDataSet loadedMMaps;
             ACE_RW_Mutex loadedMMaps_lock;
