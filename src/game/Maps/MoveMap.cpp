@@ -59,7 +59,7 @@ MMapManager::~MMapManager()
     // if we had, tiles in MMapData->mmapLoadedTiles, their actual data is lost!
 }
 
-void MMapManager::CleanUpNavQuery(uint32 tid)
+void MMapManager::CleanUpNavQuery(size_t tid)
 {
     loadedMMaps_lock.acquire_read();
     //DEBUG_LOG("Cleaning up any dtNavMeshQuery related to tid %u in loadedMMaps", tid);
@@ -78,10 +78,10 @@ void MMapManager::CleanUpNavQuery(uint32 tid)
 
 void MMapManager::CleanUpCurrentThreadNavQuery()
 {
-    CleanUpNavQuery(ACE_Based::Thread::currentId());
+    CleanUpNavQuery(reinterpret_cast<size_t>(ACE_Based::Thread::currentId()));
 }
 
-void MMapManager::RemoveThreadNavMeshQueries(uint32 tid, MMapData *mmap)
+void MMapManager::RemoveThreadNavMeshQueries(size_t tid, MMapData *mmap)
 {
     // Speed up if the TID doesn't have any existing dtNavMeshQuery
     mmap->navMeshQueries_lock.acquire_read();
@@ -386,11 +386,11 @@ dtNavMeshQuery const* MMapManager::GetNavMeshQuery(uint32 mapId)
     loadedMMaps_lock.release();
 
     // We store dtNavMeshQueries by thread ID since they are not thread-safe. This poses a problem
-    // since, over time, the TID is not unique, and we are left with stale queries. Furthermore, 
+    // since, over time, the TID is not unique, and we are left with stale queries. Furthermore,
     // since the pool of IDs is so large, we allocate a significant amount of memory which may or
     // may not ever be used again. We must be sure to clean up the nav query once a thread exits.
     // Alive thread ID uniqueness is guaranteed for both Unix and Windows.
-    uint32 tid = ACE_Based::Thread::currentId();
+    size_t tid = reinterpret_cast<size_t>(ACE_Based::Thread::currentId());
 
     mmap->navMeshQueries_lock.acquire_read();
     NavMeshQuerySet::iterator it = mmap->navMeshQueries.find(tid);
@@ -410,12 +410,14 @@ dtNavMeshQuery const* MMapManager::GetNavMeshQuery(uint32 mapId)
         {
             mmap->navMeshQueries_lock.release();
             dtFreeNavMeshQuery(navMeshQuery);
-            sLog.outError("MMAP:GetNavMeshQuery: Failed to initialize dtNavMeshQuery for mapId %03u thread %u", mapId, tid);
+            sLog.outError("MMAP:GetNavMeshQuery: Failed to initialize dtNavMeshQuery for mapId %03u thread %zu",
+                          mapId, tid);
             return NULL;
         }
 
-        DETAIL_LOG("MMAP:GetNavMeshQuery: created dtNavMeshQuery for mapId %03u thread %u", mapId, tid);
-        mmap->navMeshQueries.insert(std::pair<uint32, dtNavMeshQuery*>(tid, navMeshQuery));
+        DETAIL_LOG("MMAP:GetNavMeshQuery: created dtNavMeshQuery for mapId %03u thread %zu",
+                   mapId, tid);
+        mmap->navMeshQueries.insert(std::pair<size_t, dtNavMeshQuery*>(tid, navMeshQuery));
     }
     else
         navMeshQuery = it->second;
@@ -517,7 +519,7 @@ dtNavMeshQuery const* MMapManager::GetModelNavMeshQuery(uint32 displayId)
     MMapData* mmap = loadedModels[displayId];
     loadedModels_lock.release();
 
-    uint32 tid = ACE_Based::Thread::currentId();
+    size_t tid = reinterpret_cast<size_t>(ACE_Based::Thread::currentId());
     dtNavMeshQuery* navMeshQuery = NULL;
 
     mmap->navMeshQueries_lock.acquire_read();
@@ -534,12 +536,14 @@ dtNavMeshQuery const* MMapManager::GetModelNavMeshQuery(uint32 displayId)
         {
             dtFreeNavMeshQuery(navMeshQuery);
             mmap->navMeshQueries_lock.release();
-            sLog.outError("MMAP:GetNavMeshQuery: Failed to initialize dtNavMeshQuery for displayid %03u tid %u", displayId, tid);
+            sLog.outError("MMAP:GetNavMeshQuery: Failed to initialize dtNavMeshQuery for displayid %03u tid %zu",
+                          displayId, tid);
             return NULL;
         }
 
-        DETAIL_LOG("MMAP:GetNavMeshQuery: created dtNavMeshQuery for displayid %03u tid %u", displayId, tid);
-        mmap->navMeshQueries.insert(std::pair<uint32, dtNavMeshQuery*>(tid, navMeshQuery));
+        DETAIL_LOG("MMAP:GetNavMeshQuery: created dtNavMeshQuery for displayid %03u tid %zu",
+                   displayId, tid);
+        mmap->navMeshQueries.insert(std::pair<size_t, dtNavMeshQuery*>(tid, navMeshQuery));
     }
     else
         navMeshQuery = it->second;
