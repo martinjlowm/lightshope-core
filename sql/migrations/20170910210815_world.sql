@@ -46,7 +46,6 @@ VALUES (10808, 1, 3614.7, -3187.64, 131.406, 11, 100),
 -- End of migration.
 END IF;
 END??
-delimiter ; 
+delimiter ;
 CALL add_migration();
 DROP PROCEDURE IF EXISTS add_migration;
-
